@@ -43,9 +43,9 @@ Click [here](docs/instructors.md) for more information about the course instruct
 | 10:00 - 10:15 | Break |
 | 10:15 - 11:45 | [Data Management and Collaboration Best Practices](docs/data_management/data_management.md) |
 | 11:45 - 13:00 | Lunch |
-| 13:00 - 14:30 | Choice of Intro to Python, Intro to RStudio, or Intermediate Bash |
+| 13:00 - 14:30 | Choice of [Intro to Python](resources/Python-AdvPython2018.ppx.pdf), [Intro to RStudio](https://drive.google.com/open?id=0B3FV8Ena5NQKSnFNUnMyVXlMWGc), or [Intermediate Bash](docs/bash_scripting/bash_scripting.md) |
 | 14:30 - 14:45 | Break |
-| 14:45 - 16:15 | Choice of Intermediate Python, Intermediate RStudio, or Advanced Bash |
+| 14:45 - 16:15 | Choice of [Intermediate Python](resources/Python-AdvPython2018.ppx.pdf), [Intermediate RStudio](https://drive.google.com/open?id=0B3FV8Ena5NQKSnFNUnMyVXlMWGc), or [Advanced Bash](docs/bash_scripting/bash_scripting.md) |
 | 16:15 - 16:30 | Break |
 | 16:30 - 17:00 | [Hands-on Exercises & Bring-your-own-code Workshop](docs/hands_on_02.md) |
 
@@ -59,19 +59,19 @@ Click [here](docs/instructors.md) for more information about the course instruct
 | 11:45 - 13:00 | Lunch |
 | 13:00 - 14:30 | [Optimization and Parallelization of Workflows for HPC Part 1](docs/optimization_parallelization/optimization_parallelization_01.md) |
 | 14:30 - 14:45 | Break |
-| 14:45 - 16:15 | [Optimization and Parallelization of Workflows for HPC Part 2](docs/optimization_parallelization/optimization_parallelization_04.md) |
-| 16:15 - 16:30 | Break |
-| 16:30 - 17:00 | Hands-on Exercises & Bring-your-own-code Workshop |
+| 14:45 - 16:00 | [Optimization and Parallelization of Workflows for HPC Part 2](docs/optimization_parallelization/optimization_parallelization_04.md) |
+| 16:00 - 16:30 | Break |
+| 16:30 - 17:00 | [Hands-on Exercises & Bring-your-own-code Workshop](docs/hands_on_03.md) |
 
 ### Thursday
 
 | Time | Topic |
 |--------|--------------------------------------------------|
-|  8:30 - 10:00 | Best Practices for Reproducibility in Research |
+|  8:30 - 10:00 | [Best Practices for Reproducibility: Version Control](docs/reproducibility_git/reproducibility_git_01.md) |
 | 10:00 - 10:15 | Break |
-| 10:15 - 11:45 | Best Practices for Reproducibility in Research |
+| 10:15 - 11:45 | [Best Practices for Reproducibility in Research: Containers](docs/reproducibility_containers/reproducibility_containers_01.md) |
 | 11:45 - 13:00 | Lunch |
-| 13:00 - 14:30 | Best Practices for Reproducibility in Research |
+| 13:00 - 14:30 | [Best Practices for Reproducibility in Research: Reproducible Containers](docs/reproducibility_containers/reproducibility_containers_02.md) |
 | 14:30 - 14:45 | Break |
 | 14:45 - 16:15 | Best Practices for Reproducibility in Research |
 | 16:15 - 16:30 | Break |
@@ -82,6 +82,6 @@ Click [here](docs/instructors.md) for more information about the course instruct
 | Time | Topic |
 |--------|--------------------------------------------------|
 |  8:30 - 9:30  | Course Review and Next Steps |
-|  9:30 - 11:45 | Bring your own code workshop / one-on-one assitance |
+|  9:30 - 11:45 | Bring your own code workshop / one-on-one assistance |
 | 11:45 - 13:00 | Lunch |
-| 13:00 - 17:00 | Bring your own code workshop / one-on-one assitance |
+| 13:00 - 17:00 | Bring your own code workshop / one-on-one assistance |

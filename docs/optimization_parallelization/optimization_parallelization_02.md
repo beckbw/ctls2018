@@ -3,9 +3,16 @@
 Being able to accurately monitor a job is an invaluable skill.
 It will enable you to measure how fast your analyses run, and help track down bugs when issues arise (they often do).
 
-### Record Runtime
+Lets begin by requesting a compute node for 3 hours (180 minutes).
 
-Whenever you run a large task, or want to compare the runtime of programs, the `time` command provides an easy way to track the runtime.
+```
+$ idev -m 180 -p skx-normal -r LF_18_WEDNESDAY -N 1 -n 48
+```
+
+### Runtime
+
+Whenever you run a large task, or want to compare the runtime of programs, the `time` command is the easiest way to track the runtime without editing any source code.
+
 Lets give it a try.
 
 ```
@@ -20,7 +27,7 @@ user    0m0.000s
 sys     0m0.000s
 ```
 
-Where these values mean
+Explanation of values
 
 | Row | Definition |
 |-----|------------|
@@ -28,8 +35,15 @@ Where these values mean
 | user | Time spent in user mode |
 | sys | Time spend in kernel mode |
 
-The real time will be the most important for us.
-Now that we know how to interpret it, let's try running a longer task.
+The real time will be the most important for us, and maps to the "walltime" of your jobs. Now that we know how to interpret it, let's try running a longer task.
+
+First, copy a BED file
+
+```
+$ cp /work/03076/gzynda/stampede2/ctls-public/SRR2014925.bed .
+```
+
+and then sort it, and print out the first few records.
 
 ```
 $ time sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head
@@ -53,7 +67,9 @@ but we can also print verbose statistics by calling it directly with the `-v` ar
 $ LC_ALL=C /usr/bin/time -v sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head
 ```
 
-#### Explore
+Which metrics are most interesting?
+
+#### Explore (5 minutes)
 
 - Try timing some other commands you know
 
@@ -62,30 +78,34 @@ $ LC_ALL=C /usr/bin/time -v sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head
 Sometimes you run a longer pipeline with multiple programs and you want to see how each process is running instead of summary statistics at the end.
 The `top` program is a good way to monitor **currently** running tasks.
 
-Lets monitor our un-optimized sort and see what it looks like.
-First, we are going to launch it as a background process with the `&` character, and then immediately monitor it with top before it exits.
+Open a second terminal to Stampede 2 and `ssh` to your idev node.
+**DO NOT** issue another idev command.
+
+Your prompts should show the same host on both terminals.
+
+In your second terminal, launch `top`.
+This shows you all running processes on the system.
+You can quit top by simply hitting `Q`.
+
+To make your screen less confusing, you can also view just *your* processes with
 
 ```
-$ sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head &
-$ top
-```
-
-After `sort` finishes, quit top the same way you quit `less` - by hitting `Q`.
-
-If all the root processes are confusing to you, you can decide to only show your processes by launching it with the `-u` argument.
-
-```
-$ sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head &
 $ top -u [username]
+```
+
+Now that you can easily pick out your tasks, lets monitor our un-optimized sort and see what it looks like.
+
+```
+$ sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head
 ```
 
 While inside top, you can also sort by
 
-- Memory (`f` then `n` then `Enter`)
-- CPU (`f` then `k` then `Enter`)
-- PID (`f` then `a` then `Enter`)
+- Memory (hit `f` then `n` then `Enter`)
+- CPU (hit `f` then `k` then `Enter`)
+- PID (hit `f` then `a` then `Enter`)
 
-I recommend using top to monitor the following things when using a tool for the first time:
+I recommend using top to monitor the following things when using a tool for the first time, so you can answer the following questions:
 
 - How many cores does it use?
   - Each 100% corresponds to a core or thread
@@ -94,50 +114,12 @@ I recommend using top to monitor the following things when using a tool for the 
 - How much memory is being used?
   - When a program fails, I will often watch it to make sure it never gets close to 100% memory usage.
 
-#### Explore
+#### Explore (5 minutes)
 
-- Try monitoring other commands you know
-
-### Passive monitoring
-
-For times when you job is too long to watch with `top` and the summary statistics provided by `time` are insufficient, [REMORA](https://github.com/TACC/remora) is a powerful and easy to use tool.
-REMORA was developed at TACC, so we deploy it on each system, but it can also be installed on any other system.
-After loading the `remora` module, you use it the same way you use time. All performance metrics are recorded to files for you to view after your run.
-Lets give it a try using our `sort` example.
-
-```
-$ module load remora
-$ remora sort -S 100M -k1,1 -k2,2n SRR2014925.bed | head
-```
-
-Performance statistics are recorded every 10 seconds by default, and those metrics can be found int the `remora_[jobid]` folder that is created.
-
-```
-$ nid01040(32)$ head remora_867614/CPU/cpu_nid01040.txt                                               
- %time 1496537190                                                                                   
- %usr 1.99 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 95.96 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00                                                 
- %sys 0.08 1.00 0.00 0.99 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 3.03 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00                                                  
- %idle 97.92 99.00 100.00 99.01 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 1.01 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00                                                        
- %time 1496537200                                                                                   
- %usr 2.10 0.00 0.00 0.00 100.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00                                                
- %sys 0.02 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00                                                  
- %idle 97.88 100.00 100.00 100.00 0.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00 100.00                                                      
- %time 1496537211                                                                                   
- %usr 2.08 0.00 0.00 0.00 100.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00    
-```                                            
-
-You can also generate figures using the `remora_post` command.
-
-```
-$ module load python
-$ remora_post
-```
-
-Which generates PNG files you can download and view.
-
-#### Explore
-
-- Try monitoring other commands you know
+- Try monitoring other commands or tools you know
+  - tophat2
+  - cufflinks
+  - blast
 <br>
 <br>
 

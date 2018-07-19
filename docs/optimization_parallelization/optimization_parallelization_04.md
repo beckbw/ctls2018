@@ -1,8 +1,10 @@
 # Task Distribution
 
-One of the most convenient tools that we have at TACC is [Launcher](https://github.com/TACC/launcher). Similar to `xargs`, Launcher is a simple way to work through single-node tasks. In addition to scheduling tasks on a single node, Launcher can also spawn tasks on other nodes allocated to the job. This is good news for everyone that needs to complete a lot of work because every time you submit a job, your priority goes down. If you can bundle all of your work into one large job, you will optimize your scheduling priority.
+One of the most convenient and powerful tools that we have at TACC is [Launcher](https://github.com/TACC/launcher). Launcher is a simple way to work through a list of single-node tasks. In addition to scheduling tasks on a single node, Launcher can also spawn tasks on other nodes allocated to the job (this is how you can *really* take advantage of TACC).
+This is good news for everyone that needs to complete a lot of work because every time you submit a job, your priority goes down.
+If you can bundle all of your work into one large job, you will not only complete a lot of work, you will optimize your scheduling priority.
 
-Launcher works by working through a text file and executing each line as a job. Inside each line
+Launcher works through a text file and executes each line as a separate task. Inside each line
 
 - Output can be piped
 - Commands can be chained
@@ -12,195 +14,287 @@ Launcher works by working through a text file and executing each line as a job. 
 Lets begin by making a program that writes the task ID and the hostname it was run from.
 
 ```
-for ID in {1..48}
+for task in {1..10}
 do
-   echo "echo $ID - "'$HOSTNAME - $(date +%s)'
+        echo "echo \"This is task-${task} on \$(hostname)\""
 done
 ```
 
+Notice that we escape the inside double-quote with a slash (`\"`).
 If all the quotes are correct, your output should look like
 
 ```
-echo 1 - $HOSTNAME - seconds
-echo 2 - $HOSTNAME - seconds
+echo "This is task-1 on $HOSTNAME"
 ...
-echo 47 - $HOSTNAME - seconds
-echo 48 - $HOSTNAME - seconds
+echo "This is task-10 on $HOSTNAME"
 ```
 
-Redirect this to a file so we can run it with launcher.
+`$HOSTNAME` will resolve when the commands are run again.
+Now, redirect this to a file called `commandList` so we can run it with launcher.
 
 ```
-for ID in {1..48}
+for task in {1..10}
 do
-   echo "echo $ID - "'$HOSTNAME - $(date +%s)'
-done > launcher_cmds.txt
+        echo "echo \"This is task-${task} on \$(hostname)\""
+done > commandList
 ```
 ### Single node tasks
 
-Using the skills we already have, we can already run this file in parallel on a single node using `xargs`.
+We can turn this into a launcher job by creating the SLURM submission script `launcher_test_single.sh`
 
 ```
-cat launcher_cmds.txt | xargs -L 1 -P 3 -I {} bash -c {}
-```
+#!/bin/bash
+#SBATCH -J test_launcher
+#SBATCH -o test_launcher.%j.o
+#SBATCH -e test_launcher.%j.e
+#SBATCH -p skx-normal
+#SBATCH --mail-user=email@server.com
+#SBATCH --mail-type=begin
+#SBATCH --mail-type=end
+#SBATCH -t 2:00:00
+#SBATCH -A TRAINING-OPEN
+#SBATCH -N 1
+#SBATCH -n 1
 
-We can turn this into a launcher job by creating the SLURM submission script `launcher_single.sh`
-
-```
-#SBATCH -J hostname      # Job name
-#SBATCH -o hostname.%j.o # Name of stdout output file (%j expands to jobId)
-#SBATCH -e hostname.%j.e # Name of stdout output file (%j expands to jobId)
-#SBATCH -p normal        # Queue name
-#SBATCH -N 1             # Total number of nodes requested (24 cores/node)
-#SBATCH -n 24            # Total number of tasks to run in total
-#SBATCH -t 00:10:00      # Run time (hh:mm:ss)
-#SBATCH -A TRAINING-HPC  # <-- Allocation name to charge job against
-
-# Load launcher
 module load launcher
 
-# Configure launcher
-EXECUTABLE=$TACC_LAUNCHER_DIR/init_launcher
-PRUN=$TACC_LAUNCHER_DIR/paramrun
-CONTROL_FILE=launcher_cmds.txt
-WORKDIR=.
+for task in {1..10}; do
+        echo "echo \"This is task-${task} on \$(hostname)\""
+done > commandList
 
-# Start launcher
-$PRUN $EXECUTABLE $CONTROL_FILE
+export LAUNCHER_PLUGIN_DIR=${LAUNCHER_DIR}/plugins
+export LAUNCHER_RMI=SLURM
+export LAUNCHER_JOB_FILE=commandList
+
+$LAUNCHER_DIR/paramrun
+```
+
+You can also copy this file
+
+```
+$ cp /work/03076/gzynda/stampede2/ctls-public/launcher_test_single.sh .
 ```
 
 Then submit the job script to your reservation
 
 ```
-sbatch --reservation=LSC launcher_single.sh
+sbatch --reservation=LF_18_WEDNESDAY launcher_test_single.sh
 ```
 
-This job will run all 48 tasks in parallel 24 at a time (`-n 24`) on a single node (`-N 1`). If your tasks require multiple cores, make sure you divide `-n` by that number. For example, use `-n 4` to concurrently run 4 6-core tasks on all 24 cores on a LS5 compute node.
+This job will run the 10 tasks, 1 at a time (`-n 1`) on a single node (`-N 1`).
+The output from this job can be viewed at
 
-#### Explore
+- `test_launcher.*.o` - stdout
+- `test_launcher.*.e` - stderr
 
-- Try using launcher with other code you know
-- Try monitoring a launcher job with remora
+#### Explore (5 minutes)
+
+- Try piping each command to a file (make sure you don't overwrite files!!)
 
 ### Running tasks on multiple nodes
 
-Whenever you workload becomes too large for a single node, Launcher makes it easy to run it across more, and TACC always has more nodes. All you need to do is increase `-N` to reflect the number of nodes you need, and set `-n` to equal `tasks_per_node * N`.
+Launcher also makes it easy to take any workflow and scale it out to multiple compute nodes.
+Assuming you have enough tasks, you simply need to change:
 
-Lets give it a try with our example.
+- `-N` - Number of nodes to used
+- `-n` - Total concurrent tasks
+
+Lets copy our single-node submission script to the new file `launcher_test_double.sh`
 
 ```
-#SBATCH -J host_dist      # Job name
-#SBATCH -o host_dist.%j.o # Name of stdout output file (%j expands to jobId)
-#SBATCH -e host_dist.%j.e # Name of stdout output file (%j expands to jobId)
-#SBATCH -p normal        # Queue name
-#SBATCH -N 2             # Total number of nodes requested (24 cores/node)
-#SBATCH -n 48            # Total number of tasks to run in total
-#SBATCH -t 00:10:00      # Run time (hh:mm:ss)
-#SBATCH -A TRAINING-HPC  # <-- Allocation name to charge job against
+$ cp launcher_test_single.sh launcher_test_double.sh
+```
 
-# Load launcher
+and modify the `SBATCH` header to use two nodes and two tasks.
+
+```
+#!/bin/bash
+#SBATCH -J test_launcher2
+#SBATCH -o test_launcher2.%j.o
+#SBATCH -e test_launcher2.%j.e
+#SBATCH -p skx-normal
+#SBATCH --mail-user=email@server.com
+#SBATCH --mail-type=begin
+#SBATCH --mail-type=end
+#SBATCH -t 2:00:00
+#SBATCH -A TRAINING-OPEN
+#SBATCH -N 2
+#SBATCH -n 2
+
 module load launcher
 
-# Configure launcher
-EXECUTABLE=$TACC_LAUNCHER_DIR/init_launcher
-PRUN=$TACC_LAUNCHER_DIR/paramrun
-CONTROL_FILE=launcher_cmds.txt
-WORKDIR=.
+for task in {1..10}; do
+        echo "echo \"This is task-${task} on \$(hostname)\""
+done > commandList
 
-# Start launcher
-$PRUN $EXECUTABLE $CONTROL_FILE
+export LAUNCHER_PLUGIN_DIR=${LAUNCHER_DIR}/plugins
+export LAUNCHER_RMI=SLURM
+export LAUNCHER_JOB_FILE=commandList
+
+$LAUNCHER_DIR/paramrun
 ```
 
-Submit it to the same reservation
+and then submit
 
 ```
-sbatch --reservation=LSC launcher_single.sh
+$ sbatch --reservation=LF_18_WEDNESDAY launcher_test_double.sh
 ```
 
-Use `squeue -u username` to watch the progress of your job.
-Then look at the output when it finishes.
+#### Explore (10 minutes)
+
+- Adapt this to run our sweep of `run_tophat_yeast.sh` across two nodes (`-N 2`), and two tasks per node (`-n 4`)
+  - both 1M and 500K reads
+  - {4, 8, 12, 24} cores
+
+### Workflows
+
+Launcher blocks when it runs, so you can have multiple parallel sections in your workflow.
 
 ```
-less host_dist*.o
-```
+#!/bin/bash
+#SBATCH -J test_launcher2
+#SBATCH -o test_launcher2.%j.o
+#SBATCH -e test_launcher2.%j.e
+#SBATCH -p skx-normal
+#SBATCH --mail-user=email@server.com
+#SBATCH --mail-type=begin
+#SBATCH --mail-type=end
+#SBATCH -t 2:00:00
+#SBATCH -A TRAINING-OPEN
+#SBATCH -N 2
+#SBATCH -n 2
 
-You should see two distinct host names in your output.
-
-You are now ready to utilize multiple nodes for your work at TACC.
-Launcher makes it that (relatively) easy.
-
-### Running sort on two nodes
-
-Lets write a workflow to sort two bed files concurrently. First, copy the bed files to your `$SCRATCH` directory.
-
-```
-$ cd $SCRATCH
-$ cp /work/03076/gzynda/public/data/ctls2017/* .
-```
-
-You should now see two large BED files with SRA naming.
-
-- SRR1570041.bed
-- SRR2014925.bed
-
-#### Command file
-
-Now that you have your input files, we need to create the launcher command file.
-Please adapt the following command for both files.
-
-```
-sort --parallel 24 -S 100M -k1,1 -k2,2n IN.bed > OUT.bed
-```
-
-Your command file shold have two lines!
-
-#### Write a new submission file
-
-You now need to modify your SLURM submission file to use the new command file.
-
-```
-cp launcher_single.sh launcher_sort.sh
-```
-
-Now edit `launcher_sort.sh`
-
-```
-#SBATCH -J host_dist      # Job name
-#SBATCH -o host_dist.%j.o # Name of stdout output file (%j expands to jobId)
-#SBATCH -e host_dist.%j.e # Name of stdout output file (%j expands to jobId)
-#SBATCH -p normal        # Queue name
-#SBATCH -N 2             # Total number of nodes requested (24 cores/node)
-#SBATCH -n HOWMANY??            # Total number of tasks to run in total
-#SBATCH -t 00:10:00      # Run time (hh:mm:ss)
-#SBATCH -A TRAINING-HPC  # <-- Allocation name to charge job against
-
-# Load launcher
 module load launcher
 
-# Configure launcher
-EXECUTABLE=$TACC_LAUNCHER_DIR/init_launcher
-PRUN=$TACC_LAUNCHER_DIR/paramrun
-CONTROL_FILE=[CHANGE THIS!!!!]
-WORKDIR=.
+# Commands for section 1
+for task in {1..10}; do
+        echo "echo \"This is s1-task-${task} on \$(hostname)\""
+done > commandList1
 
-# Start launcher
-$PRUN $EXECUTABLE $CONTROL_FILE
+export LAUNCHER_PLUGIN_DIR=${LAUNCHER_DIR}/plugins
+export LAUNCHER_RMI=SLURM
+export LAUNCHER_JOB_FILE=commandList1
+$LAUNCHER_DIR/paramrun
+
+# Commands for section 2
+for task in {1..10}; do
+        echo "echo \"This is s2-task-${task} on \$(hostname)\""
+done > commandList2
+
+export LAUNCHER_JOB_FILE=commandList1
+$LAUNCHER_DIR/paramrun
 ```
 
-#### Submit!
+#### Explore (10 minutes)
 
-Everything should work if you submit.
+Use both
 
-#### Explore
+- /work/03076/gzynda/stampede2/ctls-public/run_cufflinks_yeast.sh
+- /work/03076/gzynda/stampede2/ctls-public/run_tophat_yeast.sh
 
-- Craft your own multi-node scripts for some of your tools
+to run the tophat/cufflinks workflow on both 500K and 1M reads using launcher in a single sbatch script. The shortest job wins!
+
+```
+#!/bin/bash
+#SBATCH -J test_launcher
+#SBATCH -o test_launcher.%j.o
+#SBATCH -e test_launcher.%j.e
+#SBATCH -p skx-normal
+#SBATCH --mail-user=gzynda@tacc.utexas.edu
+#SBATCH --mail-type=begin
+#SBATCH --mail-type=end
+#SBATCH -t 2:00:00
+#SBATCH -A TRAINING-OPEN
+#SBATCH -N 1
+#SBATCH -n 4
+
+# Load standard module
+module load launcher
+ml tophat/2.1.1 bowtie/2.3.2 cufflinks/2.2.1
+
+# Hardcode cores
+CORES=8
+
+# Input paths
+PUBLIC=/work/03076/gzynda/stampede2/ctls-public
+VER=Saccharomyces_cerevisiae/Ensembl/EF4
+GENES=${PUBLIC}/${VER}/Annotation/Genes/genes.gtf
+REF=${PUBLIC}/${VER}/Sequence/Bowtie2Index/genome
+
+# Launcher variables
+export LAUNCHER_PLUGIN_DIR=${LAUNCHER_DIR}/plugins
+export LAUNCHER_RMI=SLURM
+
+###########################################
+# Tophat section
+###########################################
+
+for prefix in WT_{C,N}R_A_{500K,1M}; do
+	# Define out folder
+	OUT=${prefix}_n${CORES}_tophat
+	[ -e $OUT ] && rm -rf $OUT
+	echo "tophat2 -p ${CORES} -G $GENES -o $OUT --no-novel-juncs $REF ${PUBLIC}/${prefix}.fastq &> ${OUT}.log"
+done > tophatCommands
+
+# Run launcher section
+export LAUNCHER_JOB_FILE=tophatCommands
+$LAUNCHER_DIR/paramrun
+
+###########################################
+# Cufflinks section
+###########################################
+
+# four tasks, so use quarter of node
+CORES=12
+
+#### Run cufflinks
+for PRE in WT_{C,N}R_A_{500K,1M}_n${CORES}; do
+	OUT=${PRE}_links
+	[ -e ${OUT} ] && rm -rf ${OUT}
+	echo "cufflinks -p $CORES -o ${OUT} -G $GENES ${PRE}_tophat/accepted_hits.bam &> ${OUT}.log"
+done > cufflinksCommands
+
+# Run launcher section
+export LAUNCHER_JOB_FILE=cufflinksCommands
+$LAUNCHER_DIR/paramrun
+
+# only two tasks, so use half of node
+CORES=24
+
+#### Merge results
+for SIZE in 500K 1M; do
+	MERGE=${SIZE}_n${CORES}_merge
+	[ -e ${MERGE}.txt ] && rm ${MERGE}.txt
+	for PRE in WT_{C,N}R_A_${SIZE}_n${CORES}; do
+		echo "${PRE}_links/transcripts.gtf" >> ${MERGE}.txt
+	done
+	[ -e ${MERGE} ] && rm -rf ${MERGE}
+	echo "cuffmerge -p $CORES -g $GENES -s ${REF}.fa -o ${MERGE} ${MERGE}.txt &> ${MERGE}.log"
+done > cuffmergeCommands
+
+# Run launcher section
+export LAUNCHER_JOB_FILE=cuffmergeCommands
+$LAUNCHER_DIR/paramrun
+
+#### Cuffdiff
+SUFF="_tophat/accepted_hits.bam"
+for SIZE in 500K 1M; do
+	DIFF=${SIZE}_n${CORES}_diff
+	MERGE=${SIZE}_n${CORES}_merge
+	echo "cuffdiff -L CR,NR -p $CORES ${MERGE}/merged.gtf -o ${DIFF} ${CR}${SUFF} ${NR}${SUFF} &> ${DIFF}.log"
+done > cuffdiffCommands
+
+# Run launcher section
+export LAUNCHER_JOB_FILE=cuffdiffCommands
+$LAUNCHER_DIR/paramrun
+```
 
 ### Launcher Limitations
 
 Launcher is great, but it has two limitations that you may eventually run into.
 
 - It cannot dynamically add tasks to its work queue
-- All commands are executed in the `sh` (Bourne) shell, not `bash`
+- All commands are executed in the `sh` (Bourne) shell, not `bash`, so your commands can't be too fancy
 <br>
 <br>
 
