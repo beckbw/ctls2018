@@ -7,9 +7,17 @@ Learn the skills necessary to develop and execute life sciences workflows on lar
 
 Participants should bring their laptops and plan to participate actively. Laptops will require a terminal application for accessing compute resources.
 
+## AT&T wifi:
+
+Coupon Code: WPiL-1T3C-1J
+
 ## Instructors:
 
 Click [here](docs/instructors.md) for more information about the course instructors.
+
+## Etherpad
+
+[https://public.etherpad-mozilla.org/p/ctls2018](https://public.etherpad-mozilla.org/p/ctls2018)
 
 ## Agenda
 

@@ -41,9 +41,9 @@ $ logout
 ## Piping
 
 Every program we run from the command line has three data streams associated with it:
-1) STDIN (0) -- Standard input, the data that is fed into the program
-2) STDOUT (1) -- Standard output, the data that is output by the program
-3) STDERR (2) -- Standard error, error messages from the program
+1. STDIN (0) -- Standard input, the data that is fed into the program
+2. STDOUT (1) -- Standard output, the data that is output by the program
+3. STDERR (2) -- Standard error, error messages from the program
 
 With piping, we can direct these data streams from one program into another. A pipe uses the operator `(|)`, and takes the output `STDOUT` from the program on the left, and uses that as the input `STDIN` for the program on the right.
 
@@ -73,7 +73,7 @@ Pipes can be used to quickly chain together multiple applications into a pipelin
 | `env`                    | print all environment variables |
 | `echo $VAR`              | print the contents of an the environment variable "VAR" |
 | `export VAR="value"`     | set an environment variable "VAR" to "value" |
-| `env` | grep "PATTERN"`   | search for "PATTERN" among environment variables |
+| `env | grep "PATTERN"`   | search for "PATTERN" among environment variables |
 
 
 
